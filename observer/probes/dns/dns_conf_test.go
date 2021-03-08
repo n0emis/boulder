@@ -88,6 +88,7 @@ func TestDNSConf_validateProto(t *testing.T) {
 		fields  fields
 		wantErr bool
 	}{
+		// valid
 		{"tcp", fields{"tcp"}, false},
 		{"udp", fields{"udp"}, false},
 		// invalid

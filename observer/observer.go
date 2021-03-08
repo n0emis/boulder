@@ -41,28 +41,42 @@ type Observer struct {
 // Start registers global metrics and spins off a goroutine for each of
 // the configured monitors
 func (o Observer) Start() {
-	// register metrics
-	o.Metric.MustRegister(statMonitors)
-	o.Metric.MustRegister(statObservations)
 
 	// start each monitor
 	for _, mon := range o.Monitors {
 		if mon.valid {
-			// TODO(@beautifulentropy): track and restart unhealthy goroutines
 			go mon.start()
 		}
-		statMonitors.WithLabelValues(
-			mon.prober.Name(), mon.prober.Type(), strconv.FormatBool(mon.valid)).Inc()
+
 	}
 	// run forever
 	select {}
 }
 
-// New creates new observer and it's corresponding monitor objects
-func New(c ObsConf, l blog.Logger, p prometheus.Registerer) *Observer {
-	var monitors []*monitor
-	for _, c := range c.MonConfs {
-		monitors = append(monitors, &monitor{c.Valid, c.Period.Duration, c.getProber(), l, p})
+// New attempts to populate and return an `Observer` object with the
+// contents of an `ObsConf`. If the `ObsConf` cannot be validated, an
+// error appropriate for end-user consumption is returned
+func New(c ObsConf, l blog.Logger, p prometheus.Registerer) (*Observer, error) {
+	// validate the `ObsConf`
+	err := c.validate(l)
+	if err != nil {
+		return nil, err
 	}
-	return &Observer{l, p, monitors}
+
+	// register metrics
+	p.MustRegister(statObservations)
+	p.MustRegister(statMonitors)
+
+	// Create a `monitor` for each `MonConf`
+	var monitors []*monitor
+	for _, m := range c.MonConfs {
+		if !m.Valid {
+			statMonitors.WithLabelValues(
+				"", m.Kind, strconv.FormatBool(m.Valid)).Inc()
+		} else {
+			monitors = append(
+				monitors, &monitor{m.Valid, m.Period.Duration, m.getProber(), l, p})
+		}
+	}
+	return &Observer{l, p, monitors}, nil
 }

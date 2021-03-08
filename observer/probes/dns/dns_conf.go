@@ -36,6 +36,7 @@ func (c DNSConf) UnmarshalSettings(settings []byte) (p.Configurer, error) {
 	return conf, nil
 }
 
+// normalize trims and lowers the string fields of `DNSConf`
 func (c DNSConf) normalize() {
 	c.Proto = strings.Trim(strings.ToLower(c.Proto), " ")
 	c.QName = strings.Trim(strings.ToLower(c.QName), " ")
@@ -44,16 +45,16 @@ func (c DNSConf) normalize() {
 }
 
 func (c DNSConf) validateServer() error {
-	// ensure `server` does not contain scheme
 	schemeExp := regexp.MustCompile("^([[:alnum:]]+://)(.*)+$")
+	// ensure `server` does not contain scheme
 	if schemeExp.MatchString(c.Server) {
 		return fmt.Errorf(
 			"invalid server, %q, remove %q", c.Server,
 			strings.SplitAfter(c.Server, "://")[0])
 	}
 
-	// ensure `server` contains a port
 	serverExp := regexp.MustCompile("^(.*)+([[:alnum:]])+(:)([[:digit:]]{1,5})$")
+	// ensure `server` contains a port
 	if !serverExp.MatchString(c.Server) {
 		return fmt.Errorf(
 			"invalid server, %q, is missing a port", c.Server)
@@ -93,7 +94,9 @@ func (c DNSConf) validateQType() error {
 		"invalid query_type, got: %q, expected one in %s", c.QType, q)
 }
 
-// Validate normalizes and validates the received probe config
+// Validate normalizes and validates the received `DNSConf`. If the
+// `DNSConf` cannot be validated, an error appropriate for end-user
+// consumption is returned
 func (c DNSConf) Validate() error {
 	c.normalize()
 
@@ -133,7 +136,8 @@ func (c DNSConf) AsProbe() p.Prober {
 	}
 }
 
-// init is called on observer start and registers DNS as a probe type
+// init is called at runtime and registers `DNSConf`, a probe
+// `Configurer` type, as "DNS"
 func init() {
 	p.Register("DNS", DNSConf{})
 }

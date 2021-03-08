@@ -9,19 +9,18 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type settings map[string]interface{}
-
 // MonConf is exported to receive yaml configuration
 type MonConf struct {
-	Valid    bool
 	Period   cmd.ConfigDuration `yaml:"period"`
 	Timeout  int                `yaml:"timeout"`
-	Kind     string             `yaml:"type"`
-	Settings settings           `yaml:"settings"`
+	Kind     string             `yaml:"kind"`
+	Settings p.Settings         `yaml:"settings"`
+	Valid    bool
 }
 
+// normalize trims and lowers the string fields of `MonConf`
 func (c MonConf) normalize() {
-	c.Kind = strings.ToLower(c.Kind)
+	c.Kind = strings.Trim(strings.ToLower(c.Kind), " ")
 }
 
 func (c MonConf) unmashalProbeSettings() (p.Configurer, error) {
@@ -37,7 +36,9 @@ func (c MonConf) unmashalProbeSettings() (p.Configurer, error) {
 	return probeConf, nil
 }
 
-// validate normalizes and validates the received monitor config
+// validate normalizes and validates the received `MonConf`. If the
+// `MonConf` cannot be validated, an error appropriate for end-user
+// consumption is returned
 func (c *MonConf) validate() error {
 	c.normalize()
 	probeConf, err := c.unmashalProbeSettings()

@@ -34,8 +34,8 @@ func main() {
 	defer logger.AuditPanic()
 	logger.Info(cmd.VersionString())
 
-	// validate config
-	err = config.Validate(logger)
+	// validate config and create an observer object
+	observer, err := observer.New(config, logger, prom)
 	if err != nil {
 		cmd.FailOnError(err, "config failed validation")
 	}
@@ -43,6 +43,5 @@ func main() {
 	// start daemon
 	logger.Infof("Initializing boulder-observer daemon from config: %s", *configPath)
 	logger.Debugf("Using config: %+v", config)
-	observer := observer.New(config, logger, prom)
 	observer.Start()
 }

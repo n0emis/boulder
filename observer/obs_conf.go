@@ -6,25 +6,25 @@ import (
 
 	"github.com/letsencrypt/boulder/cmd"
 	blog "github.com/letsencrypt/boulder/log"
-	p "github.com/letsencrypt/boulder/observer/probes"
-)
-
-var (
-	errNewObsNoMons = errors.New("observer config is invalid, 0 monitors configured")
-	errNewObsEmpty  = errors.New("observer config is empty")
 )
 
 // ObsConf is exported to receive yaml configuration
 type ObsConf struct {
 	Syslog    cmd.SyslogConfig `yaml:"syslog"`
 	DebugAddr string           `yaml:"debugaddr"`
-	Modules   []p.Configurer   `yaml:"modules"`
 	MonConfs  []*MonConf       `yaml:"monitors"`
 }
 
-func (n *ObsConf) validateMonConfs() ([]error, bool) {
+// validateMonConfs calls the validate method for each of the received
+// `MonConf` objects. If an error is encountered, this is appended to a
+// slice of errors. If no `MonConf` remain, the list of errors is
+// returned along with `false`, indicating there are 0 valid `MonConf`.
+// Otherwise, the list of errors is returned to be presented to the
+// end-user, and true is returned to indicate that there is at least one
+// valid `MonConf`
+func (c *ObsConf) validateMonConfs() ([]error, bool) {
 	var validationErrs []error
-	for _, m := range n.MonConfs {
+	for _, m := range c.MonConfs {
 		err := m.validate()
 		if err != nil {
 			validationErrs = append(validationErrs, err)
@@ -32,24 +32,23 @@ func (n *ObsConf) validateMonConfs() ([]error, bool) {
 	}
 
 	// all configured monitors are invalid, cannot continue
-	if len(n.MonConfs) == len(validationErrs) {
+	if len(c.MonConfs) == len(validationErrs) {
 		return validationErrs, false
 	}
 	return validationErrs, true
 }
 
-// Validate normalizes and validates the observer config as well as each
-// monitor config. If no valid monitor configs remain, Validate will
-// return an error indicating that observer cannot be started. In all
-// instances the the rationale for invalidating a monitor will logged to
-// stderr
-func (n *ObsConf) Validate(log blog.Logger) error {
-	if n == nil {
-		return errNewObsEmpty
+// validate normalizes and validates the observer config as well as each
+// `MonConf`. If no valid `MonConf` remain, an error indicating that
+// Observer cannot be started is returned. In all instances the the
+// rationale for invalidating a 'MonConf' will logged to stderr
+func (c *ObsConf) validate(log blog.Logger) error {
+	if c == nil {
+		return errors.New("observer config is empty")
 	}
 
-	if len(n.MonConfs) == 0 {
-		return errNewObsNoMons
+	if len(c.MonConfs) == 0 {
+		return errors.New("observer config is invalid, 0 monitors configured")
 	}
 
 	logErrs := func(errs []error, lenMons int) {
@@ -59,18 +58,18 @@ func (n *ObsConf) Validate(log blog.Logger) error {
 		}
 	}
 
-	errs, ok := n.validateMonConfs()
+	errs, ok := c.validateMonConfs()
 
-	// if no valid mons remain, log validation errors, and return in
-	// error
+	// if no valid `MonConf` remain, log validation errors, return error
 	if len(errs) != 0 && !ok {
-		logErrs(errs, len(n.MonConfs))
+		logErrs(errs, len(c.MonConfs))
 		return fmt.Errorf("no valid mons, cannot continue")
 	}
 
-	// if at least 1 valid monitor remains, only log validation errors
+	// if at least one valid `MonConf` remains, only log validation
+	// errors
 	if len(errs) != 0 && ok {
-		logErrs(errs, len(n.MonConfs))
+		logErrs(errs, len(c.MonConfs))
 	}
 	return nil
 }
