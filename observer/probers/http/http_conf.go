@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"strings"
 
-	p "github.com/letsencrypt/boulder/observer/probes"
+	p "github.com/letsencrypt/boulder/observer/probers"
 	"gopkg.in/yaml.v2"
 )
 
@@ -41,16 +41,16 @@ func (c HTTPConf) Validate() error {
 	url, err := url.Parse(c.URL)
 	if err != nil {
 		return fmt.Errorf(
-			"invalid url, got: %q, expected a valid url", c.URL)
+			"invalid 'url', got: %q, expected a valid url", c.URL)
 	}
 	if url.Scheme == "" {
 		return fmt.Errorf(
-			"invalid url, got: %q, missing scheme", c.URL)
+			"invalid 'url', got: %q, missing scheme", c.URL)
 	}
 	// validate `rcodes`
 	if c.RCodes == nil {
 		return fmt.Errorf(
-			"invalid rcodes, got: %q, please specify at least one", c.RCodes)
+			"invalid 'rcodes', got: %q, please specify at least one", c.RCodes)
 	}
 	return nil
 }

@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	p "github.com/letsencrypt/boulder/observer/probes"
+	p "github.com/letsencrypt/boulder/observer/probers"
 	"github.com/miekg/dns"
 	"gopkg.in/yaml.v2"
 )

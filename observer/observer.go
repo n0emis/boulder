@@ -7,8 +7,8 @@ import (
 	"github.com/letsencrypt/boulder/metrics"
 
 	// _ are probes imported to trigger init func
-	_ "github.com/letsencrypt/boulder/observer/probes/dns"
-	_ "github.com/letsencrypt/boulder/observer/probes/http"
+	_ "github.com/letsencrypt/boulder/observer/probers/dns"
+	_ "github.com/letsencrypt/boulder/observer/probers/http"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

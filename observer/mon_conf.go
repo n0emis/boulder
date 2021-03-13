@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/letsencrypt/boulder/cmd"
-	p "github.com/letsencrypt/boulder/observer/probes"
+	p "github.com/letsencrypt/boulder/observer/probers"
 	"gopkg.in/yaml.v2"
 )
 

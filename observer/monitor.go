@@ -5,7 +5,7 @@ import (
 	"time"
 
 	blog "github.com/letsencrypt/boulder/log"
-	p "github.com/letsencrypt/boulder/observer/probes"
+	p "github.com/letsencrypt/boulder/observer/probers"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -30,7 +30,7 @@ func (m monitor) start() *time.Ticker {
 		for {
 			select {
 			case <-ticker.C:
-				result, dur := m.prober.Do(m.period)
+				result, dur := m.prober.Probe(m.period)
 				statObservations.WithLabelValues(
 					m.prober.Name(), m.prober.Kind(), strconv.FormatBool(result)).
 					Observe(dur.Seconds())

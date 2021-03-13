@@ -14,24 +14,42 @@ var (
 	Registry = make(map[string]Configurer)
 )
 
-// Prober is the expected interface for Prober types
+// Prober is the interface for `Prober` types
 type Prober interface {
+
+	// Name returns a name that uniquely identifies the monitor that
+	// configured this `Prober`. Used for metrics and logging
 	Name() string
+
+	// Kind returns a name that uniquely identifies the `Kind` of
+	// `Prober`. Used for metrics and logging
 	Kind() string
-	Do(time.Duration) (bool, time.Duration)
+
+	// Probe attempts the configured request or query
+	Probe(time.Duration) (bool, time.Duration)
 }
 
-// Configurer is the expected interface for Configurer types
+// Configurer is the interface for `Configurer` types
 type Configurer interface {
+
+	// UnmarshalSettings unmarshals YAML as bytes to the fields of the
+	// bound struct
 	UnmarshalSettings([]byte) (Configurer, error)
+
+	// Validate ensures that the unmarshalled settings are valid and
+	// returns errors appropriate for operator consumption when this is
+	// not the case
 	Validate() error
+
+	// AsProbe should be called last and return a `Prober` object to be
+	// used by an `observer.monitor`
 	AsProbe() Prober
 }
 
 // Settings is exported as a temporary receiver for the `settings` field
-// of the yaml config. It's always marshaled back to bytes and then
-// unmarshalled into the `Configurer` specified by the `kind` field of
-// the `MonConf`
+// of the yaml config. `Settings` is always marshaled back to bytes and
+// then unmarshalled into the `Configurer` specified by the `kind` field
+// of the `MonConf`
 type Settings map[string]interface{}
 
 // GetProbeConf returns the probe configurer specified by name from
