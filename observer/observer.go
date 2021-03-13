@@ -18,7 +18,7 @@ var (
 			Name: "obs_monitors",
 			Help: "count of configured monitors",
 		},
-		[]string{"name", "type", "valid"},
+		[]string{"name", "kind", "valid"},
 	)
 	statObservations = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
@@ -26,7 +26,7 @@ var (
 			Help:    "time taken for a monitor to perform a request/query",
 			Buckets: metrics.InternetFacingBuckets,
 		},
-		[]string{"name", "type", "result"},
+		[]string{"name", "kind", "result"},
 	)
 )
 

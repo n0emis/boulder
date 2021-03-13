@@ -18,8 +18,8 @@ func (p HTTPProbe) Name() string {
 	return fmt.Sprintf("%s-%d", p.URL, p.RCodes)
 }
 
-// Type returns the type of prober as a string
-func (p HTTPProbe) Type() string {
+// Kind returns a name that uniquely identifies the prober
+func (p HTTPProbe) Kind() string {
 	return "HTTP"
 }
 

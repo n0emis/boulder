@@ -22,8 +22,8 @@ func (p DNSProbe) Name() string {
 	return fmt.Sprintf("%s-%s-%s-%s", p.Proto, p.Server, p.QName, dns.TypeToString[p.QType])
 }
 
-// Type returns a name that uniquely identifies the monitor
-func (p DNSProbe) Type() string {
+// Kind returns a name that uniquely identifies the prober
+func (p DNSProbe) Kind() string {
 	return "DNS"
 }
 

@@ -17,7 +17,7 @@ var (
 // Prober is the expected interface for Prober types
 type Prober interface {
 	Name() string
-	Type() string
+	Kind() string
 	Do(time.Duration) (bool, time.Duration)
 }
 

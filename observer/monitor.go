@@ -32,11 +32,11 @@ func (m monitor) start() *time.Ticker {
 			case <-ticker.C:
 				result, dur := m.prober.Do(m.period)
 				statObservations.WithLabelValues(
-					m.prober.Name(), m.prober.Type(), strconv.FormatBool(result)).
+					m.prober.Name(), m.prober.Kind(), strconv.FormatBool(result)).
 					Observe(dur.Seconds())
 				m.logger.Infof(
-					"type=[%s] result=[%v] duration=[%f] name=[%s]",
-					m.prober.Type(), result, dur.Seconds(), m.prober.Name())
+					"kind=[%s] result=[%v] duration=[%f] name=[%s]",
+					m.prober.Kind(), result, dur.Seconds(), m.prober.Name())
 			}
 		}
 	}()

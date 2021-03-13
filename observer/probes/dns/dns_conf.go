@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"regexp"
+	"strconv"
 	"strings"
 
 	p "github.com/letsencrypt/boulder/observer/probes"
@@ -49,25 +50,31 @@ func (c DNSConf) validateServer() error {
 	// ensure `server` does not contain scheme
 	if schemeExp.MatchString(c.Server) {
 		return fmt.Errorf(
-			"invalid server, %q, remove %q", c.Server,
+			"invalid `server`, %q, remove %q", c.Server,
 			strings.SplitAfter(c.Server, "://")[0])
 	}
 
-	serverExp := regexp.MustCompile("^(.*)+([[:alnum:]])+(:)([[:digit:]]{1,5})$")
+	servExp := regexp.MustCompile("^(.*)+([[:alnum:]])+(:)([[:digit:]]{1,5})$")
 	// ensure `server` contains a port
-	if !serverExp.MatchString(c.Server) {
+	if !servExp.MatchString(c.Server) {
 		return fmt.Errorf(
-			"invalid server, %q, is missing a port", c.Server)
+			"invalid `server`, %q, missing a port", c.Server)
 	}
-
-	// ensure `server` is a valid fqdn, ipv4, or ipv6 address
-	host := serverExp.FindAllStringSubmatch(c.Server, -1)[0][1]
+	// ensure the `server` port provided is a valid port
+	servExpMatches := servExp.FindAllStringSubmatch(c.Server, -1)
+	port, _ := strconv.Atoi(servExpMatches[0][4])
+	if !(port > 0 && port < 65535) {
+		return fmt.Errorf(
+			"invalid `server`, %q, is not a valid port", port)
+	}
+	// ensure `server` is a valid fqdn or ipv4/ipv6 address
+	host := servExpMatches[0][1]
 	ipv6 := net.ParseIP(host).To16()
 	ipv4 := net.ParseIP(host).To4()
 	fqdn := dns.IsFqdn(dns.Fqdn(host))
 	if ipv6 == nil && ipv4 == nil && fqdn != true {
 		return fmt.Errorf(
-			"invalid server, %q, is not an fqdn or ipv4/6 address", c.Server)
+			"invalid `server`, %q, is not an fqdn or ipv4/6 address", c.Server)
 	}
 	return nil
 }
@@ -79,7 +86,7 @@ func (c DNSConf) validateProto() error {
 		}
 	}
 	return fmt.Errorf(
-		"invalid protocol, got: %q, expected one in: %s", c.Proto, validProtos)
+		"invalid `protocol`, got: %q, expected one in: %s", c.Proto, validProtos)
 }
 
 func (c DNSConf) validateQType() error {
@@ -91,7 +98,7 @@ func (c DNSConf) validateQType() error {
 		}
 	}
 	return fmt.Errorf(
-		"invalid query_type, got: %q, expected one in %s", c.QType, q)
+		"invalid `query_type`, got: %q, expected one in %s", c.QType, q)
 }
 
 // Validate normalizes and validates the received `DNSConf`. If the
@@ -102,7 +109,7 @@ func (c DNSConf) Validate() error {
 
 	// validate `query_name`
 	if !dns.IsFqdn(dns.Fqdn(c.QName)) {
-		return fmt.Errorf("invalid query_name, %q is not an fqdn", c.QName)
+		return fmt.Errorf("invalid `query_name`, %q is not an fqdn", c.QName)
 	}
 
 	// validate `server`
