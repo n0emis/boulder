@@ -410,10 +410,10 @@ func (pa *AuthorityImpl) checkWhitelist(domain string) (bool, error) {
 
        if len(pa.lockdown) > 0 {
                // In Lockdown mode, the domain MUST be in the list, so return an error if not found
-               return false, fmt.Errorf("Testerror") //errPolicyForbidden
+               return false, errPolicyForbidden
        } else {
                // In Whitelist mode, if the domain is not in the list, continue with the other checks
-               return false, fmt.Errorf("Testerror2345")
+               return false, nil
        }
 }
 
