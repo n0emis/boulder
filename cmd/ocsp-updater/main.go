@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/jmhodges/clock"
-	akamaipb "github.com/letsencrypt/boulder/akamai/proto"
 	capb "github.com/letsencrypt/boulder/ca/proto"
 	"github.com/letsencrypt/boulder/cmd"
 	"github.com/letsencrypt/boulder/core"
@@ -61,7 +60,6 @@ type OCSPUpdater struct {
 	// these requests in parallel allows us to get higher total throughput.
 	parallelGenerateOCSPRequests int
 
-	purgerService akamaipb.AkamaiPurgerClient
 	// issuer is used to generate OCSP request URLs to purge
 	issuer *x509.Certificate
 
@@ -76,7 +74,6 @@ func newUpdater(
 	dbMap ocspDB,
 	ogc capb.OCSPGeneratorClient,
 	sac core.StorageAuthority,
-	apc akamaipb.AkamaiPurgerClient,
 	config OCSPUpdaterConfig,
 	issuerPath string,
 	log blog.Logger,
@@ -126,7 +123,6 @@ func newUpdater(
 		ocspMinTimeToExpiry:          config.OCSPMinTimeToExpiry.Duration,
 		ocspStaleMaxAge:              config.OCSPStaleMaxAge.Duration,
 		parallelGenerateOCSPRequests: config.ParallelGenerateOCSPRequests,
-		purgerService:                apc,
 		genStoreHistogram:            genStoreHistogram,
 		generatedCounter:             generatedCounter,
 		storedCounter:                storedCounter,
@@ -137,13 +133,11 @@ func newUpdater(
 		backoffFactor:                config.SignFailureBackoffFactor,
 	}
 
-	if updater.purgerService != nil {
-		issuer, err := core.LoadCert(issuerPath)
-		if err != nil {
-			return nil, err
-		}
-		updater.issuer = issuer
+	issuer, err := core.LoadCert(issuerPath)
+	if err != nil {
+		return nil, err
 	}
+	updater.issuer = issuer
 
 	return &updater, nil
 }
@@ -350,20 +344,11 @@ type OCSPUpdaterConfig struct {
 	OCSPStaleMaxAge              cmd.ConfigDuration
 	ParallelGenerateOCSPRequests int
 
-	AkamaiBaseURL           string
-	AkamaiClientToken       string
-	AkamaiClientSecret      string
-	AkamaiAccessToken       string
-	AkamaiV3Network         string
-	AkamaiPurgeRetries      int
-	AkamaiPurgeRetryBackoff cmd.ConfigDuration
-
 	SignFailureBackoffFactor float64
 	SignFailureBackoffMax    cmd.ConfigDuration
 
 	SAService            *cmd.GRPCClientConfig
 	OCSPGeneratorService *cmd.GRPCClientConfig
-	AkamaiPurgerService  *cmd.GRPCClientConfig
 
 	Features map[string]bool
 }
@@ -371,7 +356,6 @@ type OCSPUpdaterConfig struct {
 func setupClients(c OCSPUpdaterConfig, stats prometheus.Registerer, clk clock.Clock) (
 	capb.OCSPGeneratorClient,
 	core.StorageAuthority,
-	akamaipb.AkamaiPurgerClient,
 ) {
 	var tls *tls.Config
 	var err error
@@ -388,14 +372,7 @@ func setupClients(c OCSPUpdaterConfig, stats prometheus.Registerer, clk clock.Cl
 	cmd.FailOnError(err, "Failed to load credentials and create gRPC connection to SA")
 	sac := bgrpc.NewStorageAuthorityClient(sapb.NewStorageAuthorityClient(saConn))
 
-	var apc akamaipb.AkamaiPurgerClient
-	if c.AkamaiPurgerService != nil {
-		apcConn, err := bgrpc.ClientSetup(c.AkamaiPurgerService, tls, clientMetrics, clk)
-		cmd.FailOnError(err, "Failed to load credentials and create gRPC connection to Akamai Purger service")
-		apc = akamaipb.NewAkamaiPurgerClient(apcConn)
-	}
-
-	return ogc, sac, apc
+	return ogc, sac
 }
 
 func (updater *OCSPUpdater) tick() {
@@ -454,7 +431,7 @@ func main() {
 	sa.InitDBMetrics(dbMap, stats)
 
 	clk := cmd.Clock()
-	ogc, sac, apc := setupClients(conf, stats, clk)
+	ogc, sac := setupClients(conf, stats, clk)
 
 	updater, err := newUpdater(
 		stats,
@@ -462,7 +439,6 @@ func main() {
 		dbMap,
 		ogc,
 		sac,
-		apc,
 		// Necessary evil for now
 		conf,
 		c.Common.IssuerCert,

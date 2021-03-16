@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/jmhodges/clock"
+	"github.com/letsencrypt/boulder/akamai"
+	akamaipb "github.com/letsencrypt/boulder/akamai/proto"
 	caPB "github.com/letsencrypt/boulder/ca/proto"
 	"github.com/letsencrypt/boulder/core"
 	corepb "github.com/letsencrypt/boulder/core/proto"
@@ -26,6 +28,7 @@ import (
 	"github.com/letsencrypt/boulder/identifier"
 	blog "github.com/letsencrypt/boulder/log"
 	"github.com/letsencrypt/boulder/metrics"
+	"github.com/letsencrypt/boulder/policy"
 	"github.com/letsencrypt/boulder/probs"
 	rapb "github.com/letsencrypt/boulder/ra/proto"
 	"github.com/letsencrypt/boulder/ratelimit"
@@ -74,6 +77,7 @@ type RegistrationAuthorityImpl struct {
 	orderLifetime                time.Duration
 
 	issuer *x509.Certificate
+	purger akamaipb.AkamaiPurgerClient
 
 	ctpolicy *ctpolicy.CTPolicy
 
@@ -102,6 +106,7 @@ func NewRegistrationAuthorityImpl(
 	caaClient caaChecker,
 	orderLifetime time.Duration,
 	ctp *ctpolicy.CTPolicy,
+	purger akamaipb.AkamaiPurgerClient,
 	issuer *x509.Certificate,
 ) *RegistrationAuthorityImpl {
 	ctpolicyResults := prometheus.NewHistogramVec(
@@ -173,6 +178,7 @@ func NewRegistrationAuthorityImpl(
 		orderLifetime:                orderLifetime,
 		ctpolicy:                     ctp,
 		ctpolicyResults:              ctpolicyResults,
+		purger:                       purger,
 		issuer:                       issuer,
 		namesPerCert:                 namesPerCert,
 		rateLimitCounter:             rateLimitCounter,
@@ -388,7 +394,7 @@ func (ra *RegistrationAuthorityImpl) validateContacts(ctx context.Context, conta
 				contact,
 			)
 		}
-		if err := ra.PA.ValidEmail(parsed.Opaque); err != nil {
+		if err := policy.ValidEmail(parsed.Opaque); err != nil {
 			return err
 		}
 	}
@@ -1689,6 +1695,14 @@ func (ra *RegistrationAuthorityImpl) revokeCertificate(ctx context.Context, cert
 		if _, err = ra.SA.AddBlockedKey(ctx, req); err != nil {
 			return err
 		}
+	}
+	purgeURLs, err := akamai.GeneratePurgeURLs(cert.Raw, ra.issuer)
+	if err != nil {
+		return err
+	}
+	_, err = ra.purger.Purge(ctx, &akamaipb.PurgeRequest{Urls: purgeURLs})
+	if err != nil {
+		return err
 	}
 
 	return nil

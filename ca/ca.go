@@ -175,7 +175,16 @@ func makeInternalIssuers(
 		if iss.Cert == nil || iss.Signer == nil {
 			return nil, errors.New("Issuer with nil cert or signer specified.")
 		}
-		eeSigner, err := local.NewSigner(iss.Signer, iss.Cert, x509.SHA256WithRSA, policy)
+		var sigalgo x509.SignatureAlgorithm
+		switch iss.Cert.PublicKey.(type) {
+		case *rsa.PublicKey:
+			sigalgo = x509.SHA256WithRSA
+		case *ecdsa.PublicKey:
+			sigalgo = x509.ECDSAWithSHA384
+		default:
+			sigalgo = x509.UnknownSignatureAlgorithm
+		}
+		eeSigner, err := local.NewSigner(iss.Signer, iss.Cert, sigalgo, policy)
 		if err != nil {
 			return nil, err
 		}

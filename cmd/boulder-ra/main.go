@@ -7,7 +7,6 @@ import (
 	"os"
 	"time"
 
-	akamaipb "github.com/letsencrypt/boulder/akamai/proto"
 	caPB "github.com/letsencrypt/boulder/ca/proto"
 	"github.com/letsencrypt/boulder/cmd"
 	"github.com/letsencrypt/boulder/core"
@@ -37,7 +36,6 @@ type config struct {
 		VAService           *cmd.GRPCClientConfig
 		CAService           *cmd.GRPCClientConfig
 		PublisherService    *cmd.GRPCClientConfig
-		AkamaiPurgerService *cmd.GRPCClientConfig
 
 		MaxNames     int
 		DoNotForceCN bool
@@ -156,11 +154,7 @@ func main() {
 	cmd.FailOnError(err, "Failed to load credentials and create gRPC connection to Publisher")
 	pubc := bgrpc.NewPublisherClientWrapper(pubPB.NewPublisherClient(conn))
 
-	var apc akamaipb.AkamaiPurgerClient
 	var issuerCert *x509.Certificate
-	apConn, err := bgrpc.ClientSetup(c.RA.AkamaiPurgerService, tlsConfig, clientMetrics, clk)
-	cmd.FailOnError(err, "Unable to create a Akamai Purger client")
-	apc = akamaipb.NewAkamaiPurgerClient(apConn)
 
 	issuerCert, err = core.LoadCert(c.RA.IssuerCertPath)
 	cmd.FailOnError(err, "Failed to load issuer certificate")
@@ -230,7 +224,6 @@ func main() {
 		caaClient,
 		c.RA.OrderLifetime.Duration,
 		ctp,
-		apc,
 		issuerCert,
 	)
 
