@@ -111,7 +111,7 @@ func (pa *AuthorityImpl) loadHostnamePolicy(contents []byte) error {
 
 // processHostnamePolicy handles loading a new blockedNamesPolicy into the PA.
 // All of the policy.ExactBlockedNames will be added to the
-// wildcardExactBlocklist by processHostnamePolicy to ensure that wildcards fordminBlockedNames
+// wildcardExactBlocklist by processHostnamePolicy to ensure that wildcards for
 // exact blocked names entries are forbidden.
 func (pa *AuthorityImpl) processHostnamePolicy(policy blockedNamesPolicy) error {
 	nameMap := make(map[string]bool)
@@ -504,14 +504,20 @@ func (pa *AuthorityImpl) willingToIssueWildcard(ident identifier.ACMEIdentifier)
 		}
 		// The base domain is the wildcard request with the `*.` prefix removed
 		baseDomain := strings.TrimPrefix(rawDomain, "*.")
+
+		ok, err := pa.checkWhitelist(baseDomain)
+		if err != nil {
+			return err
+		}
+
 		// Names must end in an ICANN TLD, but they must not be equal to an ICANN TLD.
 		icannTLD, err := iana.ExtractSuffix(baseDomain)
-		if err != nil {
+		if err != nil && !ok {
 			return errNonPublic
 		}
 		// Names must have a non-wildcard label immediately adjacent to the ICANN
 		// TLD. No `*.com`!
-		if baseDomain == icannTLD {
+		if baseDomain == icannTLD || baseDomain == "dn42" {
 			return errICANNTLDWildcard
 		}
 		// The base domain can't be in the wildcard exact blocklist
